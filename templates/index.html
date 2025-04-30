@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Resume Screener - AI-Powered Candidate Selection{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <h1>Find the Best Candidates with AI</h1>
+        <p class="lead">
+            Resume Screener uses artificial intelligence to analyze job descriptions and resumes, 
+            helping you identify the most qualified candidates quickly and efficiently.
+        </p>
+        <div class="mt-4">
+            <a href="{{ url_for('job_description') }}" class="btn btn-primary btn-lg">Start Screening</a>
+        </div>
+        
+        <div class="card mt-5">
+            <div class="card-header">
+                <h3 class="card-title mb-0">How It Works</h3>
+            </div>
+            <div class="card-body">
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-title">Enter Job Description</div>
+                        <div class="step-description">Enter your job description text</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-title">Set Priorities</div>
+                        <div class="step-description">Customize evaluation criteria importance</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-title">Upload Resumes</div>
+                        <div class="step-description">Upload candidate resumes for evaluation</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <div class="step-title">Review Results</div>
+                        <div class="step-description">Get detailed candidate rankings and analysis</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h3>Key Features</h3>
+                <ul>
+                    <li>AI-powered analysis of job requirements</li>
+                    <li>Automatic extraction of resume information</li>
+                    <li>Customizable evaluation criteria</li>
+                    <li>Detailed candidate scoring and ranking</li>
+                    <li>Support for multiple file formats (PDF, DOCX, TXT)</li>
+                    <li>Exportable results for team sharing</li>
+                </ul>
+                
+                <h3 class="mt-4">Benefits</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h4>Save Time</h4>
+                                <p>Reduce resume screening time by up to 75%</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h4>Reduce Bias</h4>
+                                <p>Objective evaluation based on job requirements</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h4>Improve Quality</h4>
+                                <p>Find better matches for your open positions</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h4>Streamline Process</h4>
+                                <p>Standardized evaluation workflow</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

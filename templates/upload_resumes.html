@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Resumes - Resume Screener{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1>Upload Candidate Resumes</h1>
+        <p class="lead">
+            Upload candidate resumes to evaluate them against your selected criteria.
+        </p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="steps">
+            <div class="step completed">
+                <div class="step-number">1</div>
+                <div class="step-title">Job Description</div>
+            </div>
+            <div class="step completed">
+                <div class="step-number">2</div>
+                <div class="step-title">Set Priorities</div>
+            </div>
+            <div class="step active">
+                <div class="step-number">3</div>
+                <div class="step-title">Upload Resumes</div>
+            </div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-title">Review Results</div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div id="loading-container" class="text-center my-5 d-none">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Evaluating resumes...</p>
+        </div>
+        
+        <div id="upload-form-container">
+            <form id="resume-upload-form" enctype="multipart/form-data" class="needs-validation" novalidate>
+                <div class="form-group mb-4">
+                    <label for="resumes" class="form-label">Candidate Resumes</label>
+                    <div class="file-upload" id="resumes-upload">
+                        <div class="file-upload-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zm.5 4.5a.5.5 0 0 1 0 1H3.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L3.707 4.5H8.5z"/>
+                            </svg>
+                        </div>
+                        <p>Drag and drop your resume files here, or click to browse</p>
+                        <p class="text-muted">Supported formats: PDF, DOCX, TXT</p>
+                        <input type="file" id="resumes" name="resumes" class="form-control" accept=".pdf,.docx,.doc,.txt" multiple required>
+                        <div class="invalid-feedback">
+                            Please upload at least one resume file.
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="selected-criteria-container" class="alert alert-info">
+                    <h4>Selected Evaluation Criteria</h4>
+                    <p>Candidates will be compared and ranked based on these criteria:</p>
+                    <ul id="selected-criteria-list">
+                        <!-- Selected criteria will be added here dynamically -->
+                    </ul>
+                    <p class="mt-2 mb-0"><strong>Note:</strong> Each criterion will appear as a column in your results table.</p>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <h4>Tips for Best Results</h4>
+                    <ul>
+                        <li>Upload resumes in PDF format for best text extraction</li>
+                        <li>Make sure file names are descriptive (e.g., "John_Smith.pdf")</li>
+                        <li>Include at least 2 resumes for comparison</li>
+                    </ul>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{{ url_for('job_description') }}" class="btn btn-secondary">Back to Criteria</a>
+                    <button type="submit" class="btn btn-primary btn-lg">Evaluate Candidates</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/api-client.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const resumeForm = document.getElementById('resume-upload-form');
+        const uploadFormContainer = document.getElementById('upload-form-container');
+        const loadingContainer = document.getElementById('loading-container');
+        const selectedCriteriaList = document.getElementById('selected-criteria-list');
+        
+        // Get data from session storage
+        const jobDescription = sessionStorage.getItem('jobDescription');
+        const selectedCriteria = JSON.parse(sessionStorage.getItem('selectedCriteria') || '[]');
+        const priorities = JSON.parse(sessionStorage.getItem('priorities') || '{}');
+        
+        // Check if we have the required data
+        if (!jobDescription || !selectedCriteria.length) {
+            alert('Please complete the previous steps first.');
+            window.location.href = "{{ url_for('job_description') }}";
+            return;
+        }
+        
+        // Display selected criteria
+        selectedCriteriaList.innerHTML = '';
+        selectedCriteria.forEach(criterion => {
+            const li = document.createElement('li');
+            li.textContent = `${criterion} (Priority: ${priorities[criterion]}/10)`;
+            selectedCriteriaList.appendChild(li);
+        });
+        
+        // Handle form submission
+        resumeForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!this.checkValidity()) {
+                this.classList.add('was-validated');
+                return;
+            }
+            
+            const resumeFiles = document.getElementById('resumes').files;
+            
+            if (resumeFiles.length === 0) {
+                alert('Please upload at least one resume file.');
+                return;
+            }
+            
+            // Show loading spinner
+            uploadFormContainer.classList.add('d-none');
+            loadingContainer.classList.remove('d-none');
+            
+            try {
+                // Process each resume file
+                const results = {};
+                
+                for (let i = 0; i < resumeFiles.length; i++) {
+                    const file = resumeFiles[i];
+                    const candidateName = file.name.split('.')[0]; // Use filename as candidate name
+                    
+                    // Read file content
+                    const resumeText = await readFileAsText(file);
+                    
+                    // Evaluate resume
+                    const criteriaScores = await evaluateResume(jobDescription, selectedCriteria, resumeText);
+                    
+                    // Calculate overall score
+                    const overallScore = calculateOverallScore(criteriaScores, priorities);
+                    
+                    // Store results
+                    results[candidateName] = {
+                        criteria_scores: criteriaScores,
+                        overall_score: overallScore
+                    };
+                }
+                
+                // Save results to session storage
+                sessionStorage.setItem('evaluationResults', JSON.stringify(results));
+                
+                // Redirect to results page
+                window.location.href = "{{ url_for('show_results') }}";
+                
+            } catch (error) {
+                console.error('Error evaluating resumes:', error);
+                alert('Error evaluating resumes. Please try again.');
+                
+                // Show upload form again
+                loadingContainer.classList.add('d-none');
+                uploadFormContainer.classList.remove('d-none');
+            }
+        });
+        
+        // Function to read file as text
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    resolve(e.target.result);
+                };
+                
+                reader.onerror = function(e) {
+                    reject(new Error('Error reading file'));
+                };
+                
+                reader.readAsText(file);
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block title %}Evaluation Results - Resume Screener{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1>Candidate Evaluation Results</h1>
+        <p class="lead">
+            Review the evaluation results and find the best candidate for your position.
+        </p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="steps">
+            <div class="step completed">
+                <div class="step-number">1</div>
+                <div class="step-title">Job Description</div>
+            </div>
+            <div class="step completed">
+                <div class="step-number">2</div>
+                <div class="step-title">Set Priorities</div>
+            </div>
+            <div class="step completed">
+                <div class="step-number">3</div>
+                <div class="step-title">Upload Resumes</div>
+            </div>
+            <div class="step active">
+                <div class="step-number">4</div>
+                <div class="step-title">Review Results</div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div id="results-container" class="row">
+            <div class="col-md-8">
+                <h3>Candidate Rankings</h3>
+                <div class="table-responsive">
+                    <table class="table table-hover results-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Candidate</th>
+                                <th>Overall Score</th>
+                                <th id="criteria-headers">
+                                    <!-- Criteria headers will be added here dynamically -->
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-table-body">
+                            <!-- Results will be added here dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{{ url_for('upload_resumes') }}" class="btn btn-secondary">Back to Resumes</a>
+                    <button id="download-csv" class="btn btn-primary">Download Results (CSV)</button>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card candidate-details" id="candidate-details">
+                    <div class="card-header">
+                        <h3 class="card-title mb-0">Candidate Details</h3>
+                    </div>
+                    <div class="card-body">
+                        <h4 class="candidate-name" id="detail-candidate-name"></h4>
+                        
+                        <div class="score-display">
+                            <div class="score-circle" id="detail-score-circle">
+                                <span id="detail-score-value"></span>
+                            </div>
+                            <div class="score-details">
+                                <h5>Overall Score</h5>
+                                <p class="mb-0">Based on your priority settings</p>
+                            </div>
+                        </div>
+                        
+                        <h5 class="mt-4">Criteria Scores</h5>
+                        <div id="criteria-scores-container">
+                            <!-- Criteria scores will be added here dynamically -->
+                        </div>
+                        
+                        <div class="alert alert-info mt-4">
+                            <h5>Recommendation</h5>
+                            <p class="mb-0" id="recommendation-text">
+                                <!-- Recommendation will be added here dynamically -->
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h3 class="card-title mb-0">Next Steps</h3>
+                    </div>
+                    <div class="card-body">
+                        <ul>
+                            <li>Review the detailed scores for each candidate</li>
+                            <li>Download the results for sharing with your team</li>
+                            <li>Contact the top candidates for interviews</li>
+                            <li>Start a new screening with different criteria</li>
+                        </ul>
+                        
+                        <div class="d-grid gap-2 mt-3">
+                            <a href="{{ url_for('job_description') }}" class="btn btn-primary">Start New Screening</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/api-client.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get data from session storage
+        const jobDescription = sessionStorage.getItem('jobDescription');
+        const selectedCriteria = JSON.parse(sessionStorage.getItem('selectedCriteria') || '[]');
+        const priorities = JSON.parse(sessionStorage.getItem('priorities') || '{}');
+        const results = JSON.parse(sessionStorage.getItem('evaluationResults') || '{}');
+        
+        // Check if we have the required data
+        if (!jobDescription || !selectedCriteria.length || !Object.keys(results).length) {
+            alert('Please complete the previous steps first.');
+            window.location.href = "{{ url_for('job_description') }}";
+            return;
+        }
+        
+        // Sort candidates by overall score
+        const sortedResults = Object.entries(results)
+            .sort((a, b) => b[1].overall_score - a[1].overall_score);
+        
+        // Add criteria headers
+        const criteriaHeaders = document.getElementById('criteria-headers');
+        criteriaHeaders.innerHTML = '';
+        
+        selectedCriteria.forEach(criterion => {
+            const th = document.createElement('th');
+            th.className = 'text-center';
+            th.innerHTML = `
+                <div>${criterion}</div>
+                <small class="text-muted">Priority: ${priorities[criterion]}/10</small>
+            `;
+            criteriaHeaders.appendChild(th);
+        });
+        
+        // Add results to table
+        const resultsTableBody = document.getElementById('results-table-body');
+        resultsTableBody.innerHTML = '';
+        
+        sortedResults.forEach(([candidate, data], index) => {
+            const row = document.createElement('tr');
+            row.className = 'candidate-row';
+            row.setAttribute('data-candidate', candidate);
+            row.setAttribute('data-score', data.overall_score);
+            
+            if (index === 0) {
+                row.classList.add('selected');
+            }
+            
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${candidate}</td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="progress me-2" style="width: 100px; height: 10px;">
+                            <div class="progress-bar ${data.overall_score >= 80 ? 'bg-success' : data.overall_score >= 60 ? 'bg-warning' : 'bg-danger'}" 
+                                role="progressbar" 
+                                aria-valuenow="${data.overall_score}" 
+                                aria-valuemin="0" 
+                                aria-valuemax="100"
+                                style="width: ${data.overall_score}%">
+                            </div>
+                        </div>
+                        <span class="${data.overall_score >= 80 ? 'text-success' : data.overall_score >= 60 ? 'text-warning' : 'text-danger'}">
+                            ${data.overall_score.toFixed(2)}%
+                        </span>
+                    </div>
+                </td>
+            `;
+            
+            // Add criteria scores
+            selectedCriteria.forEach(criterion => {
+                const score = data.criteria_scores[criterion] || 0;
+                const td = document.createElement('td');
+                td.textContent = `${score}/10`;
+                row.appendChild(td);
+            });
+            
+            resultsTableBody.appendChild(row);
+        });
+        
+        // Show details for the first candidate
+        if (sortedResults.length > 0) {
+            showCandidateDetails(sortedResults[0][0], sortedResults[0][1]);
+        }
+        
+        // Add event listeners to candidate rows
+        const candidateRows = document.querySelectorAll('.candidate-row');
+        candidateRows.forEach(row => {
+            row.addEventListener('click', function() {
+                // Remove selected class from all rows
+                candidateRows.forEach(r => r.classList.remove('selected'));
+                
+                // Add selected class to clicked row
+                this.classList.add('selected');
+                
+                // Show candidate details
+                const candidate = this.getAttribute('data-candidate');
+                const data = results[candidate];
+                showCandidateDetails(candidate, data);
+            });
+        });
+        
+        // Function to show candidate details
+        function showCandidateDetails(candidate, data) {
+            // Update candidate name
+            document.getElementById('detail-candidate-name').textContent = candidate;
+            
+            // Update score circle
+            const scoreCircle = document.getElementById('detail-score-circle');
+            const scoreValue = document.getElementById('detail-score-value');
+            
+            scoreCircle.className = 'score-circle';
+            if (data.overall_score >= 80) {
+                scoreCircle.classList.add('score-high');
+            } else if (data.overall_score >= 60) {
+                scoreCircle.classList.add('score-medium');
+            } else {
+                scoreCircle.classList.add('score-low');
+            }
+            
+            scoreValue.textContent = `${Math.round(data.overall_score)}%`;
+            
+            // Update criteria scores
+            const criteriaScoresContainer = document.getElementById('criteria-scores-container');
+            criteriaScoresContainer.innerHTML = '';
+            
+            selectedCriteria.forEach(criterion => {
+                const score = data.criteria_scores[criterion] || 0;
+                const scoreDiv = document.createElement('div');
+                scoreDiv.className = 'mb-3';
+                scoreDiv.innerHTML = `
+                    <div class="d-flex justify-content-between">
+                        <span>${criterion}</span>
+                        <span class="fw-bold">${score}/10</span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar ${score >= 8 ? 'bg-success' : score >= 6 ? 'bg-warning' : 'bg-danger'}" 
+                            role="progressbar" 
+                            aria-valuenow="${score * 10}" 
+                            aria-valuemin="0" 
+                            aria-valuemax="100"
+                            style="width: ${score * 10}%">
+                        </div>
+                    </div>
+                    <small class="text-muted">Priority: ${priorities[criterion]}/10</small>
+                `;
+                
+                criteriaScoresContainer.appendChild(scoreDiv);
+            });
+            
+            // Update recommendation
+            const recommendationText = document.getElementById('recommendation-text');
+            if (data.overall_score >= 80) {
+                recommendationText.textContent = 'This candidate is an excellent match for the position.';
+            } else if (data.overall_score >= 60) {
+                recommendationText.textContent = 'This candidate is a good match but may need additional training in some areas.';
+            } else {
+                recommendationText.textContent = 'This candidate may not be the best fit for this specific position.';
+            }
+        }
+        
+        // Handle download CSV button
+        document.getElementById('download-csv').addEventListener('click', function() {
+            // Create CSV content
+            let csvContent = 'Candidate,Overall Score';
+            
+            // Add criteria headers
+            selectedCriteria.forEach(criterion => {
+                csvContent += `,${criterion} (${priorities[criterion]})`;
+            });
+            csvContent += '\n';
+            
+            // Add data rows
+            sortedResults.forEach(([candidate, data]) => {
+                csvContent += `${candidate},${data.overall_score.toFixed(2)}`;
+                
+                // Add criteria scores
+                selectedCriteria.forEach(criterion => {
+                    const score = data.criteria_scores[criterion] || 0;
+                    csvContent += `,${score}`;
+                });
+                
+                csvContent += '\n';
+            });
+            
+            // Create download link
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'resume_evaluation_results.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+    });
+</script>
+{% endblock %}

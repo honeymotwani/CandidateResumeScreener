@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}Set Criteria Priorities - Resume Screener{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1>Set Evaluation Criteria Priorities</h1>
+        <p class="lead">
+            Select and customize the importance of each evaluation criterion to match your specific needs.
+        </p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="steps">
+            <div class="step completed">
+                <div class="step-number">1</div>
+                <div class="step-title">Job Description</div>
+            </div>
+            <div class="step active">
+                <div class="step-number">2</div>
+                <div class="step-title">Set Priorities</div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-title">Upload Resumes</div>
+            </div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-title">Review Results</div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <form action="{{ url_for('set_criteria') }}" method="post" class="needs-validation" novalidate>
+            <div class="alert alert-info mb-4">
+                <p class="mb-0">
+                    <strong>Priority Scale:</strong> 1 (Lowest) to 10 (Highest)
+                </p>
+            </div>
+            
+            <div class="criteria-list">
+                {% for criterion in criteria %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input 
+                                        type="checkbox" 
+                                        class="form-check-input" 
+                                        id="criterion_{{ criterion|replace(' ', '_') }}" 
+                                        name="criterion_{{ criterion|replace(' ', '_') }}" 
+                                        checked
+                                    >
+                                    <label class="form-check-label" for="criterion_{{ criterion|replace(' ', '_') }}">
+                                        <h4 class="mb-0">{{ criterion }}</h4>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="priority_{{ criterion|replace(' ', '_') }}" class="form-label">Priority (1-10)</label>
+                                    <input 
+                                        type="number" 
+                                        id="priority_{{ criterion|replace(' ', '_') }}" 
+                                        name="priority_{{ criterion|replace(' ', '_') }}" 
+                                        class="form-control priority-input" 
+                                        min="1" 
+                                        max="10" 
+                                        value="5" 
+                                        required
+                                        data-criterion="{{ criterion|replace(' ', '_') }}"
+                                    >
+                                    <div class="invalid-feedback">
+                                        Please enter a priority between 1 and 10.
+                                    </div>
+                                </div>
+                                <div class="priority-slider mt-2">
+                                    <input 
+                                        type="range" 
+                                        class="form-range priority-slider-input" 
+                                        min="1" 
+                                        max="10" 
+                                        value="5" 
+                                        id="slider_{{ criterion|replace(' ', '_') }}"
+                                        data-criterion="{{ criterion|replace(' ', '_') }}"
+                                    >
+                                    <div class="d-flex justify-content-between">
+                                        <small>Low Priority</small>
+                                        <small>High Priority</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="d-flex justify-content-between mt-4">
+                <a href="{{ url_for('job_description') }}" class="btn btn-secondary">Back to Job Description</a>
+                <button type="submit" class="btn btn-primary btn-lg">Continue to Upload Resumes</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Connect range sliders to number inputs
+        const sliders = document.querySelectorAll('.priority-slider-input');
+        const inputs = document.querySelectorAll('.priority-input');
+        const checkboxes = document.querySelectorAll('.form-check-input');
+        
+        // Function to update input from slider
+        function updateInputFromSlider(slider) {
+            const criterionId = slider.getAttribute('data-criterion');
+            const input = document.getElementById('priority_' + criterionId);
+            input.value = slider.value;
+            input.dispatchEvent(new Event('change'));
+        }
+        
+        // Function to update slider from input
+        function updateSliderFromInput(input) {
+            const criterionId = input.getAttribute('data-criterion');
+            const slider = document.getElementById('slider_' + criterionId);
+            slider.value = input.value;
+        }
+        
+        // Add event listeners to sliders
+        sliders.forEach(slider => {
+            // Set initial value
+            const criterionId = slider.getAttribute('data-criterion');
+            const input = document.getElementById('priority_' + criterionId);
+            slider.value = input.value;
+            
+            // Update input when slider changes
+            slider.addEventListener('input', function() {
+                updateInputFromSlider(this);
+            });
+        });
+        
+        // Add event listeners to inputs
+        inputs.forEach(input => {
+            // Update slider when input changes
+            input.addEventListener('change', function() {
+                updateSliderFromInput(this);
+                
+                // Update styling based on value
+                const value = parseInt(this.value);
+                if (value >= 1 && value <= 10) {
+                    const alpha = value / 10;
+                    this.style.backgroundColor = `rgba(37, 99, 235, ${alpha})`;
+                    this.style.color = value > 5 ? 'white' : 'black';
+                } else {
+                    this.style.backgroundColor = '';
+                    this.style.color = '';
+                }
+            });
+            
+            // Trigger change event to apply initial styling
+            input.dispatchEvent(new Event('change'));
+        });
+        
+        // Add event listeners to checkboxes
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const criterionId = this.id.replace('criterion_', '');
+                const input = document.getElementById('priority_' + criterionId);
+                const slider = document.getElementById('slider_' + criterionId);
+                
+                if (this.checked) {
+                    input.removeAttribute('disabled');
+                    slider.removeAttribute('disabled');
+                } else {
+                    input.setAttribute('disabled', 'disabled');
+                    slider.setAttribute('disabled', 'disabled');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
