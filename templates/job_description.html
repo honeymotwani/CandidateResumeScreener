@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 
-{% block title %}Enter Job Description - Resume Screener{% endblock %}
+{% block title %}Enter Job Description - Resume Screener Premium{% endblock %}
 
 {% block content %}
 <div class="row">
     <div class="col-12">
         <h1>Enter Job Description</h1>
         <p class="lead">
-            Enter the job description to begin the screening process.
+            Enter the job description to begin the premium screening process.
         </p>
     </div>
 </div>
 
-<div class="card">
+<div class="card card-premium">
     <div class="card-header">
         <div class="steps">
             <div class="step active">
@@ -38,21 +38,22 @@
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
-            <p class="mt-2">Analyzing job description...</p>
+            <p class="mt-2">Analyzing job description with AI...</p>
         </div>
         
         <div id="job-form-container">
-            <form id="job-description-form" class="needs-validation" novalidate>
+            <form id="job-description-form" action="{{ url_for('job_description') }}" method="post" class="needs-validation" novalidate>
+                <input type="hidden" name="session_id" id="session_id" value="">
                 <div class="form-group mb-4">
                     <label for="job_text" class="form-label">Job Description</label>
-                    <textarea id="job_text" name="job_text" class="form-control" rows="10" required></textarea>
+                    <textarea id="job_text" name="job_text" class="form-control" rows="10" placeholder="Paste your job description here..." required></textarea>
                     <div class="invalid-feedback">
                         Please enter a job description.
                     </div>
                 </div>
                 
                 <div class="alert alert-info">
-                    <h4>Tips for Best Results</h4>
+                    <h4>Premium Tips for Best Results</h4>
                     <ul>
                         <li>Include detailed information about required skills and qualifications</li>
                         <li>Specify education requirements and experience level</li>
@@ -81,7 +82,8 @@
                 </ul>
             </div>
             
-            <form id="criteria-form" class="needs-validation" novalidate>
+            <form id="criteria-form" action="{{ url_for('set_criteria') }}" method="post" class="needs-validation" novalidate>
+                <input type="hidden" name="session_id" id="criteria_session_id" value="">
                 <div id="criteria-list" class="mb-4">
                     <!-- Criteria will be added here dynamically -->
                 </div>
@@ -113,249 +115,105 @@
         const loadingContainer = document.getElementById('loading-container');
         const criteriaList = document.getElementById('criteria-list');
         const backToJobBtn = document.getElementById('back-to-job');
+        const sessionIdInput = document.getElementById('session_id');
+        const criteriaSessionIdInput = document.getElementById('criteria_session_id');
+    
+    // Set session ID from localStorage
+    const sessionId = SessionManager.getSessionId();
+    sessionIdInput.value = sessionId;
+    criteriaSessionIdInput.value = sessionId;
+    
+    // Handle job description form submission
+    jobForm.addEventListener('submit', async function(e) {
+        e.preventDefault(); // Prevent default form submission
         
-        // Store job description and criteria
-        let jobDescription = '';
-        let generatedCriteria = [];
-        
-        // Handle job description form submission
-        jobForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            if (!this.checkValidity()) {
-                this.classList.add('was-validated');
-                return;
-            }
-            
-            // Show loading spinner
-            jobFormContainer.classList.add('d-none');
-            loadingContainer.classList.remove('d-none');
-            
-            // Get job description
-            jobDescription = document.getElementById('job_text').value;
-            
-            try {
-                // Call API to generate criteria
-                generatedCriteria = await generateCriteria(jobDescription);
-                
-                // Create criteria list
-                criteriaList.innerHTML = '';
-                
-                generatedCriteria.forEach((criterion, index) => {
-                    const criterionId = criterion.replace(/\s+/g, '_');
-                    
-                    const criterionCard = document.createElement('div');
-                    criterionCard.className = 'card mb-3';
-                    criterionCard.innerHTML = `
-                        <div class="card-body">
-                            <div class="row align-items-center">
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input 
-                                            type="checkbox" 
-                                            class="form-check-input" 
-                                            id="criterion_${criterionId}" 
-                                            name="criterion_${criterionId}" 
-                                            value="${criterion}"
-                                            checked
-                                        >
-                                        <label class="form-check-label" for="criterion_${criterionId}">
-                                            <h4 class="mb-0">${criterion}</h4>
-                                            <p class="text-muted small mt-1">Will appear as a column in candidate comparison</p>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="priority_${criterionId}" class="form-label">Priority (1-10)</label>
-                                        <input 
-                                            type="number" 
-                                            id="priority_${criterionId}" 
-                                            name="priority_${criterionId}" 
-                                            class="form-control priority-input" 
-                                            min="1" 
-                                            max="10" 
-                                            value="${10 - index}"
-                                            required
-                                            data-criterion="${criterionId}"
-                                        >
-                                        <div class="invalid-feedback">
-                                            Please enter a priority between 1 and 10.
-                                        </div>
-                                    </div>
-                                    <div class="priority-slider mt-2">
-                                        <input 
-                                            type="range" 
-                                            class="form-range priority-slider-input" 
-                                            min="1" 
-                                            max="10" 
-                                            value="${10 - index}" 
-                                            id="slider_${criterionId}"
-                                            data-criterion="${criterionId}"
-                                        >
-                                        <div class="d-flex justify-content-between">
-                                            <small>Low Priority</small>
-                                            <small>High Priority</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    
-                    criteriaList.appendChild(criterionCard);
-                });
-                
-                // Initialize sliders and inputs
-                initPriorityControls();
-                
-                // Show criteria form
-                loadingContainer.classList.add('d-none');
-                criteriaContainer.classList.remove('d-none');
-                
-                // Save job description to session storage
-                sessionStorage.setItem('jobDescription', jobDescription);
-                sessionStorage.setItem('generatedCriteria', JSON.stringify(generatedCriteria));
-                
-            } catch (error) {
-                console.error('Error generating criteria:', error);
-                alert('Error generating criteria. Please try again.');
-                
-                // Show job form again
-                loadingContainer.classList.add('d-none');
-                jobFormContainer.classList.remove('d-none');
-            }
-        });
-        
-        // Handle back button
-        backToJobBtn.addEventListener('click', function() {
-            criteriaContainer.classList.add('d-none');
-            jobFormContainer.classList.remove('d-none');
-        });
-        
-        // Handle criteria form submission
-        criteriaForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            if (!this.checkValidity()) {
-                this.classList.add('was-validated');
-                return;
-            }
-            
-            // Get selected criteria and priorities
-            const selectedCriteria = [];
-            const priorities = {};
-            
-            generatedCriteria.forEach(criterion => {
-                const criterionId = criterion.replace(/\s+/g, '_');
-                const checkbox = document.getElementById(`criterion_${criterionId}`);
-                
-                if (checkbox && checkbox.checked) {
-                    selectedCriteria.push(criterion);
-                    
-                    const priorityInput = document.getElementById(`priority_${criterionId}`);
-                    if (priorityInput) {
-                        priorities[criterion] = parseInt(priorityInput.value);
-                    }
-                }
-            });
-            
-            if (selectedCriteria.length === 0) {
-                alert('Please select at least one criterion.');
-                return;
-            }
-            
-            // Save to session storage
-            sessionStorage.setItem('selectedCriteria', JSON.stringify(selectedCriteria));
-            sessionStorage.setItem('priorities', JSON.stringify(priorities));
-            
-            // Redirect to upload resumes page
-            window.location.href = "{{ url_for('upload_resumes') }}";
-        });
-        
-        // Initialize priority sliders and inputs
-        function initPriorityControls() {
-            const sliders = document.querySelectorAll('.priority-slider-input');
-            const inputs = document.querySelectorAll('.priority-input');
-            const checkboxes = document.querySelectorAll('.form-check-input');
-            
-            // Function to update input from slider
-            function updateInputFromSlider(slider) {
-                const criterionId = slider.getAttribute('data-criterion');
-                const input = document.getElementById('priority_' + criterionId);
-                input.value = slider.value;
-                input.dispatchEvent(new Event('change'));
-            }
-            
-            // Function to update slider from input
-            function updateSliderFromInput(input) {
-                const criterionId = input.getAttribute('data-criterion');
-                const slider = document.getElementById('slider_' + criterionId);
-                slider.value = input.value;
-            }
-            
-            // Add event listeners to sliders
-            sliders.forEach(slider => {
-                // Update input when slider changes
-                slider.addEventListener('input', function() {
-                    updateInputFromSlider(this);
-                });
-            });
-            
-            // Add event listeners to inputs
-            inputs.forEach(input => {
-                // Update slider when input changes
-                input.addEventListener('change', function() {
-                    updateSliderFromInput(this);
-                    
-                    // Update styling based on value
-                    const value = parseInt(this.value);
-                    if (value >= 1 && value <= 10) {
-                        const alpha = value / 10;
-                        this.style.backgroundColor = `rgba(37, 99, 235, ${alpha})`;
-                        this.style.color = value > 5 ? 'white' : 'black';
-                    } else {
-                        this.style.backgroundColor = '';
-                        this.style.color = '';
-                    }
-                });
-                
-                // Trigger change event to apply initial styling
-                input.dispatchEvent(new Event('change'));
-            });
-            
-            // Add event listeners to checkboxes
-            checkboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    const criterionId = this.id.replace('criterion_', '');
-                    const input = document.getElementById('priority_' + criterionId);
-                    const slider = document.getElementById('slider_' + criterionId);
-                    
-                    if (this.checked) {
-                        input.removeAttribute('disabled');
-                        slider.removeAttribute('disabled');
-                    } else {
-                        input.setAttribute('disabled', 'disabled');
-                        slider.setAttribute('disabled', 'disabled');
-                    }
-                });
-            });
+        if (!this.checkValidity()) {
+            this.classList.add('was-validated');
+            return;
         }
         
-        // Check if we have data in session storage (e.g., from a page refresh)
-        const storedJobDescription = sessionStorage.getItem('jobDescription');
-        const storedGeneratedCriteria = sessionStorage.getItem('generatedCriteria');
+        // Show loading spinner
+        jobFormContainer.classList.add('d-none');
+        loadingContainer.classList.remove('d-none');
         
-        if (storedJobDescription && storedGeneratedCriteria) {
-            jobDescription = storedJobDescription;
-            generatedCriteria = JSON.parse(storedGeneratedCriteria);
+        // Get job description
+        const jobDescription = document.getElementById('job_text').value;
+        
+        // Save job description to localStorage
+        SessionManager.set('rs_job_description', jobDescription);
+        
+        try {
+            // Submit form data via AJAX
+            const formData = new FormData(jobForm);
+            const response = await fetch(jobForm.action, {
+                method: 'POST',
+                body: formData
+            });
             
-            // Fill the job description field
-            document.getElementById('job_text').value = jobDescription;
+            if (response.redirected) {
+                // If the server redirected, follow the redirect
+                window.location.href = response.url;
+                return;
+            }
             
-            // Simulate form submission to show criteria
-            jobForm.dispatchEvent(new Event('submit'));
+            // Try to parse JSON response
+            try {
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    // Store criteria in localStorage
+                    SessionManager.set('rs_criteria', result.criteria);
+                    
+                    // Redirect to criteria page with session ID
+                    window.location.href = `${result.redirect}?session_id=${sessionId}`;
+                } else {
+                    // Show error message
+                    alert('Error: ' + (result.message || 'Failed to process job description'));
+                    
+                    // Hide loading spinner
+                    loadingContainer.classList.add('d-none');
+                    jobFormContainer.classList.remove('d-none');
+                }
+            } catch (jsonError) {
+                // If response is not JSON, it might be HTML
+                const htmlResponse = await response.text();
+                
+                if (htmlResponse.includes('criteria')) {
+                    // If the response contains criteria page, redirect to criteria page
+                    window.location.href = `${url_for('set_criteria')}?session_id=${sessionId}`;
+                } else {
+                    // Show error
+                    console.error('Error parsing response:', jsonError);
+                    alert('An error occurred. Please try again.');
+                    
+                    // Hide loading spinner
+                    loadingContainer.classList.add('d-none');
+                    jobFormContainer.classList.remove('d-none');
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+            
+            // Hide loading spinner
+            loadingContainer.classList.add('d-none');
+            jobFormContainer.classList.remove('d-none');
         }
     });
+    
+    // Handle back button
+    backToJobBtn.addEventListener('click', function() {
+        criteriaContainer.classList.add('d-none');
+        jobFormContainer.classList.remove('d-none');
+    });
+    
+    // Check if we have data in localStorage
+    const storedJobDescription = SessionManager.get('rs_job_description');
+    
+    if (storedJobDescription) {
+        // Fill the job description field
+        document.getElementById('job_text').value = storedJobDescription;
+    }
+});
 </script>
 {% endblock %}

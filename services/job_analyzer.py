@@ -33,12 +33,32 @@ class JobAnalyzer:
             # Filter out any lines that are too long or look like explanations
             criteria_list = [c for c in criteria_list if len(c) < 50 and '.' not in c]
             
-            # Limit to 8 criteria maximum
-            return criteria_list[:8]
+            # If we have fewer than 10 criteria, try to generate more
+            if len(criteria_list) < 10:
+                additional_response = self._call_gemini_api_for_more(job_description, criteria_list)
+                additional_criteria = [line.strip() for line in additional_response.split('\n') if line.strip()]
+                additional_criteria = [c for c in additional_criteria if len(c) < 50 and '.' not in c and c not in criteria_list]
+                
+                # Add the additional criteria
+                criteria_list.extend(additional_criteria)
+            
+            # Ensure we have at least 10 criteria if possible, but no more than 15
+            return criteria_list[:15]
         except Exception as e:
             print(f"Error generating criteria: {str(e)}")
             # Return default criteria if API call fails
-            return ["Technical Skills", "Experience", "Education", "Communication Skills", "Problem Solving"]
+            return [
+                "Technical Skills", 
+                "Experience", 
+                "Education", 
+                "Communication Skills", 
+                "Problem Solving",
+                "Team Collaboration",
+                "Industry Knowledge",
+                "Project Management",
+                "Leadership Abilities",
+                "Adaptability"
+            ]
     
     def _call_gemini_api(self, job_description):
         """
@@ -64,7 +84,7 @@ class JobAnalyzer:
         }
         
         prompt = f"""
-        Based on the following job description, identify 5-8 key evaluation criteria that would be important for 
+        Based on the following job description, identify 10-15 key evaluation criteria that would be important for 
         screening candidates. These should be specific, measurable aspects that can be evaluated from a resume.
         
         Job Description:
@@ -77,6 +97,65 @@ class JobAnalyzer:
         Education Level
         Industry Knowledge
         Project Management Experience
+        
+        Provide at least 10 different criteria, but no more than 15.
+        """
+        
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": prompt}]
+                }
+            ]
+        }
+        
+        response = requests.post(url, headers=headers, params=params, json=payload)
+        
+        if response.status_code == 200:
+            result = response.json()
+            if 'candidates' in result and len(result['candidates']) > 0:
+                return result['candidates'][0]['content']['parts'][0]['text']
+            return ""
+        else:
+            raise Exception(f"API returned status code {response.status_code}: {response.text}")
+    
+    def _call_gemini_api_for_more(self, job_description, existing_criteria):
+        """
+        Call Gemini API to get additional criteria
+        
+        Args:
+            job_description (str): The job description text
+            existing_criteria (list): List of already generated criteria
+            
+        Returns:
+            str: Additional criteria text
+        """
+        import requests
+        import json
+        
+        url = GEMINI_API_URL
+        
+        headers = {
+            "Content-Type": "application/json"
+        }
+        
+        params = {
+            "key": self.api_key
+        }
+        
+        prompt = f"""
+        Based on the following job description, identify additional evaluation criteria that would be important for 
+        screening candidates. These should be specific, measurable aspects that can be evaluated from a resume.
+        
+        Job Description:
+        {job_description}
+        
+        I already have these criteria:
+        {', '.join(existing_criteria)}
+        
+        Please provide 5-10 ADDITIONAL criteria that are different from the ones I already have.
+        Format your response as a simple list of criteria, one per line, without numbering or bullet points.
         """
         
         payload = {

@@ -26,11 +26,21 @@ class CandidateEvaluator:
         Returns:
             dict: Evaluation results for each candidate
         """
-        results = {}
+        print(f"Evaluating all {len(resumes)} candidates together for better comparison")
         
+        # First, evaluate all candidates together for direct comparison
+        comparative_scores = self._evaluate_all_resumes(job_description, criteria, list(resumes.items()))
+        
+        # Then, get detailed justifications for each candidate
+        results = {}
         for candidate, resume_text in resumes.items():
-            print(f"Evaluating candidate: {candidate}")
-            criteria_scores = self._evaluate_resume(job_description, criteria, resume_text)
+            # Get detailed justifications for this candidate
+            criteria_scores, justifications = self._get_detailed_evaluation(
+                job_description, 
+                criteria, 
+                resume_text,
+                comparative_scores.get(candidate, {})
+            )
             
             # Calculate weighted score
             total_priority = sum(priorities.values())
@@ -45,30 +55,36 @@ class CandidateEvaluator:
             
             results[candidate] = {
                 'criteria_scores': criteria_scores,
+                'justifications': justifications,
                 'overall_score': overall_score
             }
         
         return results
     
-    def _evaluate_resume(self, job_description, criteria, resume_text):
+    def _evaluate_all_resumes(self, job_description, criteria, candidate_resumes):
         """
-        Evaluate a single resume against the criteria using Gemini API
+        Evaluate all resumes together for direct comparison
         
         Args:
             job_description (str): The job description text
             criteria (list): List of evaluation criteria
-            resume_text (str): The resume text
+            candidate_resumes (list): List of (candidate_name, resume_text) tuples
             
         Returns:
-            dict: Scores for each criterion (0-10)
+            dict: Dictionary mapping candidate names to scores for each criterion
         """
         import requests
         import json
         
-        # Truncate resume text if too long to avoid API limits
-        max_length = 4000
-        if len(resume_text) > max_length:
-            resume_text = resume_text[:max_length] + "..."
+        # Prepare candidate information
+        candidates_info = []
+        for candidate_name, resume_text in candidate_resumes:
+            # Truncate resume text if too long
+            max_length = 2000  # Shorter to accommodate multiple resumes
+            truncated_resume = resume_text[:max_length] + "..." if len(resume_text) > max_length else resume_text
+            candidates_info.append(f"Candidate: {candidate_name}\nResume:\n{truncated_resume}\n\n")
+        
+        candidates_text = "\n".join(candidates_info)
         
         url = GEMINI_API_URL
         
@@ -81,26 +97,28 @@ class CandidateEvaluator:
         }
         
         prompt = f"""
-        You are an expert resume screener. Evaluate the following resume against the job description and criteria.
+        You are an expert resume screener. Evaluate and compare the following candidates for a job position.
         
         Job Description:
         {job_description}
         
-        Resume:
-        {resume_text}
-        
-        Evaluate the candidate on each of the following criteria on a scale of 0-10 (where 10 is perfect match):
+        Evaluation Criteria:
         {', '.join(criteria)}
         
-        For each criterion, provide:
-        1. A score from 0-10
-        2. A brief justification (1-2 sentences)
+        Candidates:
+        {candidates_text}
+        
+        For each candidate, evaluate them on each criterion on a scale of 0-10 (where 10 is perfect match).
+        Consider how candidates compare to each other for each criterion.
         
         Format your response as:
-        Criterion: Score
-        Justification: Brief explanation
         
-        Repeat for each criterion.
+        CANDIDATE: [Candidate Name]
+        [Criterion 1]: [Score 0-10]
+        [Criterion 2]: [Score 0-10]
+        ...
+        
+        Repeat for each candidate. Be objective and fair in your comparative assessment.
         """
         
         payload = {
@@ -120,33 +138,196 @@ class CandidateEvaluator:
                 if 'candidates' in result and len(result['candidates']) > 0:
                     response_text = result['candidates'][0]['content']['parts'][0]['text']
                     
-                    # Parse the response to extract scores
-                    scores = {}
-                    lines = response_text.strip().split('\n')
+                    # Parse the response to extract scores for each candidate
+                    comparative_scores = {}
+                    current_candidate = None
                     
-                    for criterion in criteria:
-                        for i, line in enumerate(lines):
-                            if criterion in line and ':' in line:
-                                try:
-                                    score_text = line.split(':')[1].strip()
-                                    # Extract the first number found in the score text
-                                    score = next((int(s) for s in score_text.split() if s.isdigit()), 0)
-                                    scores[criterion] = min(10, max(0, score))  # Ensure score is between 0-10
+                    for line in response_text.strip().split('\n'):
+                        line = line.strip()
+                        if not line:
+                            continue
+                            
+                        if line.startswith('CANDIDATE:'):
+                            current_candidate = line.split('CANDIDATE:')[1].strip()
+                            comparative_scores[current_candidate] = {}
+                        elif current_candidate and ':' in line:
+                            parts = line.split(':', 1)
+                            criterion = parts[0].strip()
+                            
+                            # Find the matching criterion from our list
+                            matching_criterion = None
+                            for c in criteria:
+                                if c.lower() in criterion.lower() or criterion.lower() in c.lower():
+                                    matching_criterion = c
                                     break
+                            
+                            if matching_criterion:
+                                try:
+                                    score_text = parts[1].strip()
+                                    # Extract the first number found in the score text
+                                    score_match = score_text.split()[0]
+                                    score = int(float(score_match))
+                                    comparative_scores[current_candidate][matching_criterion] = min(10, max(0, score))
                                 except (ValueError, IndexError):
-                                    scores[criterion] = 0
-                        
-                        # If criterion wasn't found in the response
-                        if criterion not in scores:
-                            scores[criterion] = 0
+                                    comparative_scores[current_candidate][matching_criterion] = 5
                     
-                    return scores
+                    return comparative_scores
             
-            # If API call fails, return default scores
-            return {criterion: 5 for criterion in criteria}
+            # If API call fails, return empty dict
+            return {}
+        except Exception as e:
+            print(f"Error in comparative evaluation: {str(e)}")
+            return {}
+    
+    def _get_detailed_evaluation(self, job_description, criteria, resume_text, comparative_scores=None):
+        """
+        Get detailed evaluation with justifications for a single resume
+        
+        Args:
+            job_description (str): The job description text
+            criteria (list): List of evaluation criteria
+            resume_text (str): The resume text
+            comparative_scores (dict): Pre-computed scores from comparative evaluation
+            
+        Returns:
+            tuple: (scores, justifications) for each criterion
+        """
+        import requests
+        import json
+        
+        # Truncate resume text if too long to avoid API limits
+        max_length = 4000
+        if len(resume_text) > max_length:
+            resume_text = resume_text[:max_length] + "..."
+        
+        url = GEMINI_API_URL
+        
+        headers = {
+            "Content-Type": "application/json"
+        }
+        
+        params = {
+            "key": self.api_key
+        }
+        
+        # Include comparative scores in the prompt if available
+        comparative_info = ""
+        if comparative_scores:
+            comparative_info = "Based on comparative analysis, you've already assigned these scores:\n"
+            for criterion, score in comparative_scores.items():
+                comparative_info += f"{criterion}: {score}/10\n"
+            comparative_info += "\nPlease provide detailed justifications for these scores."
+        
+        prompt = f"""
+        You are an expert resume screener. Evaluate the following resume against the job description and criteria.
+        
+        Job Description:
+        {job_description}
+        
+        Resume:
+        {resume_text}
+        
+        {comparative_info}
+        
+        Evaluate the candidate on each of the following criteria on a scale of 0-10 (where 10 is perfect match):
+        {', '.join(criteria)}
+        
+        For each criterion, provide:
+        1. A score from 0-10
+        2. A detailed justification (2-3 sentences) explaining why you gave this score
+        
+        Format your response EXACTLY as follows for each criterion:
+        
+        CRITERION: [Name of Criterion]
+        SCORE: [Score 0-10]
+        JUSTIFICATION: [Your detailed justification]
+        
+        Repeat this format for each criterion. Be specific and detailed in your justifications.
+        """
+        
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": prompt}]
+                }
+            ]
+        }
+        
+        try:
+            response = requests.post(url, headers=headers, params=params, json=payload)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if 'candidates' in result and len(result['candidates']) > 0:
+                    response_text = result['candidates'][0]['content']['parts'][0]['text']
+                    
+                    # Parse the response to extract scores and justifications
+                    scores = {}
+                    justifications = {}
+                    
+                    # Use comparative scores as a starting point if available
+                    if comparative_scores:
+                        scores = comparative_scores.copy()
+                    
+                    # Split by criterion sections
+                    sections = response_text.split("CRITERION:")
+                    
+                    for section in sections:
+                        if not section.strip():
+                            continue
+                            
+                        lines = section.strip().split('\n')
+                        criterion_line = lines[0].strip()
+                        
+                        # Find the criterion that best matches
+                        matched_criterion = None
+                        for c in criteria:
+                            if c.lower() in criterion_line.lower() or criterion_line.lower() in c.lower():
+                                matched_criterion = c
+                                break
+                        
+                        if not matched_criterion:
+                            continue
+                            
+                        # Extract score
+                        score = scores.get(matched_criterion, 0)  # Use existing score if available
+                        for line in lines:
+                            if "SCORE:" in line:
+                                try:
+                                    score_text = line.split("SCORE:")[1].strip()
+                                    score = int(float(score_text))
+                                    scores[matched_criterion] = min(10, max(0, score))
+                                except (ValueError, IndexError):
+                                    scores[matched_criterion] = score
+                                break
+                        
+                        # Extract justification
+                        justification = ""
+                        justification_started = False
+                        for line in lines:
+                            if "JUSTIFICATION:" in line:
+                                justification = line.split("JUSTIFICATION:")[1].strip()
+                                justification_started = True
+                            elif justification_started and line.strip() and "CRITERION:" not in line and "SCORE:" not in line:
+                                justification += " " + line.strip()
+                        
+                        justifications[matched_criterion] = justification
+                    
+                    # Ensure all criteria have scores and justifications
+                    for criterion in criteria:
+                        if criterion not in scores:
+                            scores[criterion] = 5
+                        if criterion not in justifications:
+                            justifications[criterion] = "No specific justification provided."
+                    
+                    return scores, justifications
+            
+            # If API call fails, return default scores and justifications
+            return {criterion: 5 for criterion in criteria}, {criterion: "Unable to evaluate due to API error." for criterion in criteria}
         except Exception as e:
             print(f"Error evaluating resume: {str(e)}")
-            return {criterion: 5 for criterion in criteria}
+            return {criterion: 5 for criterion in criteria}, {criterion: f"Error during evaluation: {str(e)}" for criterion in criteria}
     
     def generate_feedback(self, job_description, resume_text, criteria_scores):
         """
