@@ -1,0 +1,24 @@
+Job Summary – Data Analyst for Decision Analytics Team (Digital Support/DNA)- Engineering
+Education: Bachelor’s degree or higher in a quantitative discipline such as Computer Science, Engineering, Statistics, Mathematics, Econometrics, Information Sciences, or equivalent work experience and technical training.
+Experience:
+4-6+ years of experience in data warehousing development, large-scale data acquisition, transformation, and cleaning for both structured and unstructured data
+1-2+ years of experience with cloud-based technologies like Google Cloud Platform, using Airflow, creating DAGs, working in BigQuery
+Proficiency in SQL scripting and writing/understanding/optimizing complex queires and data modeling, including relational, star, and snowflake schemas
+Experience with data warehousing technologies and data modeling, including relational, star, and snowflake schemas (creating new tables and data pipelines with ETL, as well as integrate some of the incoming data into existing architecture)
+Strong understanding of reporting, database environments, OLAP business intelligence applications, and associated processes and applications
+Proficiency in programming languages (e.g., Python, UNIX shell) and operating systems (UNIX preferred)
+ 
+Tools & Technologies:
+Experience in full project lifecycle design, development, implementation of custom applications, and deployment of packaged solutions
+Familiarity with JIRA and/or Agile/Scrum technologies is a plus
+Skills:
+Ability to work independently, with minimal guidance or oversight
+Excellent verbal and written communication skills, with the ability to present to both technical and non-technical audiences
+Strong analytical and problem-solving skills, including the ability to map business needs to application requirements
+Detail-oriented, organized, and able to multi-task in a fast-paced environment
+Ability to collaborate effectively across all levels of an organization, with leadership experience in data requirements gathering
+Telecom industry knowledge a plus
+Other:
+Must be available to work during EST business hours
+ 
+ 

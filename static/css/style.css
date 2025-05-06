@@ -500,7 +500,7 @@ p {
   text-transform: uppercase;
   font-size: 0.75rem;
   letter-spacing: 0.05em;
-  color: var(--gray-600);
+  color: white;
   padding-top: 0.75rem;
   padding-bottom: 0.75rem;
 }
@@ -1034,7 +1034,7 @@ p {
 }
 
 .score-low {
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  background: linear-gradient(135deg, #ca7066, #c0392b);
 }
 
 .score-details {

@@ -31,10 +31,8 @@ class CandidateEvaluator:
         # First, evaluate all candidates together for direct comparison
         comparative_scores = self._evaluate_all_resumes(job_description, criteria, list(resumes.items()))
         
-        # Then, get detailed justifications for each candidate
         results = {}
         for candidate, resume_text in resumes.items():
-            # Get detailed justifications for this candidate
             criteria_scores, justifications = self._get_detailed_evaluation(
                 job_description, 
                 criteria, 
@@ -109,7 +107,8 @@ class CandidateEvaluator:
         {candidates_text}
         
         For each candidate, evaluate them on each criterion on a scale of 0-10 (where 10 is perfect match).
-        Consider how candidates compare to each other for each criterion.
+        Consider how candidates compare to each other for each criterion.It must give a score for each criterion.
+        if criteria is mandatory, score must be 10.if criteria is preferred, score must be 8.if criteria is optional, score can be between 4 and .
         
         Format your response as:
         

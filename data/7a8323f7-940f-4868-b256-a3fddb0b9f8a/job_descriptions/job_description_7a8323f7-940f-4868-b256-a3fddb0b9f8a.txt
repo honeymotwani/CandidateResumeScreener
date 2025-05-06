@@ -1,0 +1,49 @@
+A Day-in-the-Life:
+● Develop and implement integrated marketing automation solutions using Salesforce
+Marketing Cloud platform
+● Collaborate with cross-functional teams to design and deliver solutions that meet
+business requirements
+● Develop and maintain Salesforce Marketing Cloud integrations with external
+systems, data sources, and APIs
+● Define and implement data integration strategies for importing and exporting data
+into/out of Salesforce Marketing Cloud
+● Develop and implement responsive, dynamic, and personalized email templates and
+landing pages
+● Ensure data quality and maintain data governance standards by building and
+managing Data Extensions, Segments, and Smart Capture Forms
+● Analyze and interpret campaign performance metrics, providing insights and
+recommendations for optimization
+● Stay up-to-date with the latest Salesforce Marketing Cloud features, releases, and
+trends in digital marketing and email marketing
+1
+A Successful Marketing Cloud Developer will:
+● Minimum of 3 years of experience in Salesforce Marketing Cloud development and
+implementation
+● Strong experience in developing responsive email templates and landing pages
+● Experience and knowledge in Salesforce Marketing Cloud's various modules such as
+Email Studio, Journey Builder, Mobile Studio, Advertising Studio, and Social Studio
+● Strong experience in Salesforce Marketing Cloud Interactions and APIs, AMPscript,
+SSJS, and SQL
+● Proficient in HTML, CSS, and JavaScript/jQuery
+● Familiarity with marketing automation, CRM systems, and sales and marketing
+processes
+● Excellent problem-solving skills and attention to detail
+● Strong written and verbal communication, project management, and collaboration
+skills
+● Certifications required: SFMC Developer and SFMC Admin
+● Certifications preferred: SF Marketing Cloud personalization & Data Cloud
+Our Core Values:
+At Sercante, we value passion, self-motivation, and a collaborative spirit. Our ideal team
+member is curious, detail-oriented, and committed to continuous learning. They excel in
+remote environments and are proactive problem-solvers.
+Key Qualities:
+● Lifelong learner with a passion for diving deep into details
+● Self-driven and thrives in dynamic, ambiguous situations
+● Organized and deadline-oriented with a strong sense of ownership
+● Effective delegator who empowers team members
+● Resourceful and able to find solutions through research
+● Curious and adaptable to new challenges and opportunities
+● Embraces remote work and aligns with our core values
+● Thoughtful communicator who clarifies client needs before proceeding
+● Continuously develops skills in Pardot, Salesforce, marketing strategy, and
+consulting

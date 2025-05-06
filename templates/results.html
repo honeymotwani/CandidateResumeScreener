@@ -225,7 +225,7 @@
                                                     aria-valuenow="{{ score * 10 }}" 
                                                     aria-valuemin="0" 
                                                     aria-valuemax="100"
-                                                    style="width: {{ score * 10 }}%">
+                                                    style="width: {{ score * 10 }}%;">
                                                 </div>
                                             </div>
                                             <div class="criterion-justification">
@@ -382,7 +382,8 @@
         });
         
         // Function to show candidate details
-        function showCandidateDetails(candidate, data) {
+        function showCandidateDetails(candidate, data) 
+        {
             // Update candidate name
             document.getElementById('detail-candidate-name').textContent = candidate;
             

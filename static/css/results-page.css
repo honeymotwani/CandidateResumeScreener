@@ -346,7 +346,7 @@
   }
   
   .score-low {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
     box-shadow: 0 2px 4px rgba(231, 76, 60, 0.3);
   }
   
