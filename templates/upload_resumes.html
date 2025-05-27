@@ -228,13 +228,13 @@
                 const response = await fetch(this.action, {
                     method: 'POST',
                     body: formData,
-                    headers  {
+                 
                     method: 'POST',
                     body: formData,
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest'
                     }
-                }});
+                });
                 
                 const result = await response.json();
                 
